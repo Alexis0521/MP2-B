@@ -1,0 +1,41 @@
+services:
+  frontend:
+    build:
+      context: ../MP2-F
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../MP2-F:/app
+      - /app/node_modules
+    env_file:
+      - ../MP2-F/.env
+    environment:
+      - NODE_ENV=development
+    container_name: mp2-frontend
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    container_name: mp2-backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
