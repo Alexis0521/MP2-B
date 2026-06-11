@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db, auth } from "../config/firebase";
-import { completeProfileSchema, registerSchema } from "../schemas/user.schema";
+import { completeProfileSchema, registerSchema, updateProfileSchema } from "../schemas/user.schema";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 
 export const getMe = async (req: AuthenticatedRequest, res: Response) => {
@@ -183,5 +183,135 @@ export const checkUsername = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error en checkUsername:", error);
     res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+export const updateProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const uid = req.uid!;
+
+  const parseResult = updateProfileSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    res.status(400).json({
+      message: "Datos inválidos",
+      errors: parseResult.error.issues,
+    });
+    return;
+  }
+
+  const { firstName, lastName, username } = parseResult.data;
+
+  try {
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+      return;
+    }
+
+    const currentData = userDoc.data()!;
+    const usernameLower = username.toLowerCase();
+
+    await db.runTransaction(async (transaction) => {
+      const oldUsername = currentData.usernameLower;
+
+      if (oldUsername !== usernameLower) {
+        const newUsernameRef =
+          db.collection("usernames").doc(usernameLower);
+
+        const newUsernameDoc =
+          await transaction.get(newUsernameRef);
+
+        if (newUsernameDoc.exists) {
+          throw new Error("USERNAME_TAKEN");
+        }
+
+        transaction.delete(
+          db.collection("usernames").doc(oldUsername)
+        );
+
+        transaction.set(newUsernameRef, {
+          uid,
+        });
+      }
+
+      transaction.update(userRef, {
+        firstName,
+        lastName,
+        username,
+        usernameLower,
+        updatedAt: new Date(),
+      });
+    });
+
+    res.status(200).json({
+      message: "Perfil actualizado correctamente",
+    });
+  } catch (error: any) {
+    if (error.message === "USERNAME_TAKEN") {
+      res.status(409).json({
+        message: "El username no está disponible",
+      });
+      return;
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Error interno del servidor",
+    });
+  }
+};
+
+export const deleteAccount = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const uid = req.uid!;
+
+  try {
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+      return;
+    }
+
+    const userData = userDoc.data()!;
+    const usernameLower = userData.usernameLower;
+
+    const batch = db.batch();
+
+    batch.delete(userRef);
+
+    if (usernameLower) {
+      const usernameRef =
+        db.collection("usernames").doc(usernameLower);
+
+      batch.delete(usernameRef);
+    }
+
+    await batch.commit();
+
+    await auth.deleteUser(uid);
+
+    res.status(200).json({
+      message: "Cuenta eliminada correctamente",
+    });
+  } catch (error) {
+    console.error("Error eliminando usuario:", error);
+
+    res.status(500).json({
+      message: "Error interno del servidor",
+    });
   }
 };
