@@ -20,3 +20,11 @@ export const registerSchema = z.object({
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "El nombre es obligatorio"),
+  lastName: z.string().min(1, "El apellido es obligatorio"),
+  username: completeProfileSchema.shape.username,
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
