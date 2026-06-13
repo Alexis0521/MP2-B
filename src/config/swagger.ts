@@ -390,6 +390,111 @@ const swaggerDocument = {
 },
 
 },
+
+"/rooms/{roomId}": {
+  get: {
+    summary: "Obtener una sala por ID",
+    tags: ["Rooms"],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      {
+        name: "roomId",
+        in: "path",
+        required: true,
+        schema: {
+          type: "string",
+        },
+      },
+    ],
+    responses: {
+      "200": {
+        description: "Sala encontrada",
+      },
+      "404": {
+        description: "Sala no encontrada",
+      },
+      "401": {
+        description: "No autenticado",
+      },
+    },
+  },
+
+  put: {
+    summary: "Actualizar nombre de una sala",
+    tags: ["Rooms"],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      {
+        name: "roomId",
+        in: "path",
+        required: true,
+        schema: {
+          type: "string",
+        },
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: {
+                type: "string",
+                minLength: 3,
+                maxLength: 50,
+              },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      "200": {
+        description: "Sala actualizada correctamente",
+      },
+      "400": {
+        description: "Datos inválidos",
+      },
+      "403": {
+        description: "Solo el anfitrión puede editar la sala",
+      },
+      "404": {
+        description: "Sala no encontrada",
+      },
+    },
+  },
+
+  delete: {
+    summary: "Eliminar sala",
+    tags: ["Rooms"],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      {
+        name: "roomId",
+        in: "path",
+        required: true,
+        schema: {
+          type: "string",
+        },
+      },
+    ],
+    responses: {
+      "200": {
+        description: "Sala eliminada correctamente",
+      },
+      "403": {
+        description: "Solo el anfitrión puede eliminar la sala",
+      },
+      "404": {
+        description: "Sala no encontrada",
+      },
+    },
+  },
+},
+
 },
 };
 
